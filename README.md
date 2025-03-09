@@ -5,8 +5,9 @@ CodeCash | Sistema Bancário
 ## Pré-requisitos
 
 Antes de começar, você precisará ter o Node.js e o npm (ou yarn) instalados em sua máquina.
+### (Precisar ser instalado dentro da pasta backend e frontend)
 
-### Instalando o Node.js
+#### Instalando o Node.js
 
 1. Vá para [https://nodejs.org/](https://nodejs.org/) e baixe a versão recomendada para desenvolvedores.
 2. Após o download, siga as instruções para instalação.

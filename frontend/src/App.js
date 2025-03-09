@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Button, TextField, Container, Typography, Box, Card, CardContent, Grid } from "@mui/material";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { NumericFormat } from "react-number-format";
 
 function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [balance, setBalance] = useState(null);
   const [amount, setAmount] = useState(0);
   const [transactionMessage, setTransactionMessage] = useState("");
@@ -20,20 +23,33 @@ function App() {
   }, [token]);
 
   const register = async () => {
-    await axios.post("http://localhost:5000/register", { username, password });
-    alert("Usuário registrado");
+    try {
+      await axios.post("http://localhost:5000/register", { username, password });
+      alert("Usuário registrado com sucesso!");
+    } catch (error) {
+      alert("Erro ao registrar: " + (error.response?.data?.error || "Erro desconhecido"));
+    }
   };
 
   const login = async () => {
     try {
       const res = await axios.post("http://localhost:5000/login", { username, password });
-      setToken(res.data.token);
-      localStorage.setItem("token", res.data.token);
-      alert("Login efetuado com sucesso");
+      const newToken = res.data.token;
+      setToken(newToken);
+      localStorage.setItem("token", newToken);
+      alert("Login efetuado com sucesso!");
       getBalance();
     } catch (error) {
-      alert("Login failed: " + (error.response?.data?.error || "Unknown error"));
+      alert("Erro ao efetuar login: " + (error.response?.data?.error || "Erro desconhecido"));
     }
+  };
+
+  const logout = () => {
+    setToken(null);
+    localStorage.removeItem("token");
+    setBalance(null);
+    setUsername("");
+    setPassword("");
   };
 
   const getBalance = async () => {
@@ -44,7 +60,8 @@ function App() {
       });
       setBalance(res.data.balance);
     } catch (error) {
-      alert("Error fetching balance: " + (error.response?.data?.error || "Unknown error"));
+      alert("Erro ao buscar saldo: " + (error.response?.data?.error || "Token inválido. Faça login novamente."));
+      logout();
     }
   };
 
@@ -57,14 +74,12 @@ function App() {
       await axios.post(
         "http://localhost:5000/deposit",
         { amount },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      setTransactionMessage("Depósito bem sucedido!");
+      setTransactionMessage("Depósito realizado com sucesso!");
       getBalance();
     } catch (error) {
-      setTransactionMessage("Depósito falhou: " + (error.response?.data?.error || "Unknown error"));
+      setTransactionMessage("Erro ao depositar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
   };
 
@@ -77,14 +92,12 @@ function App() {
       await axios.post(
         "http://localhost:5000/withdraw",
         { amount },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      setTransactionMessage("Retirada bem-sucedida!");
+      setTransactionMessage("Saque realizado com sucesso!");
       getBalance();
     } catch (error) {
-      setTransactionMessage(error.response?.data?.error || "Withdrawal failed: Unknown error");
+      setTransactionMessage("Erro ao sacar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
   };
 
@@ -92,59 +105,114 @@ function App() {
     palette: {
       primary: { main: "#0D47A1" },
       secondary: { main: "#D32F2F" },
+      success: { main: "#388E3C" },
     },
   });
 
+  const isFormValid = username.trim() !== "" && password.trim() !== "";
+
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="sm" sx={{ backgroundColor: "#f4f6f8", padding: 3, borderRadius: 2 }}>
-        <Box sx={{ textAlign: "center", marginTop: 5 }}>
-          <Typography variant="h3">
-            <AccountBalanceIcon /> CodeCash
-          </Typography>
-          <Card sx={{ marginTop: 3 }}>
-            <CardContent>
-              <TextField label="Usuário" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} sx={{ marginBottom: 2 }} />
-              <TextField label="Senha" fullWidth type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={{ marginBottom: 2 }} />
-              <Grid container spacing={2}>
-                <Grid item xs={6}><Button variant="contained" color="primary" onClick={register} fullWidth>Criar conta</Button></Grid>
-                <Grid item xs={6}><Button variant="contained" color="secondary" onClick={login} fullWidth>Login</Button></Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-          {token && balance !== null && (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "linear-gradient(to right, #0D47A1, #1976D2)",
+          padding: 3,
+        }}
+      >
+        <Container
+          maxWidth="sm"
+          sx={{
+            backgroundColor: "#ffffff",
+            padding: 4,
+            borderRadius: 3,
+            boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+            textAlign: "center",
+            transition: "0.3s",
+            "&:hover": { transform: "scale(1.02)" },
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 1, marginBottom: 3 }}>
+            <AccountBalanceIcon sx={{ fontSize: 50, color: "#0D47A1" }} />
+            <Typography variant="h3" fontWeight="bold" color="primary">
+              CodeCash
+            </Typography>
+          </Box>
+
+          {!token && (
             <Card sx={{ marginTop: 3 }}>
               <CardContent>
-              <Typography variant="h6">Saldo: R$ {balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</Typography>
-                <Button variant="contained" color="primary" onClick={getBalance} fullWidth sx={{ marginTop: 2 }}>Atualizar Saldo</Button>
-              </CardContent>
-            </Card>
-          )}
-          {token && (
-            <Card sx={{ marginTop: 3 }}>
-              <CardContent>
-                {/* <NumericFormat
-                  // label="Quantidade"
-                  // fullWidth
-                  // customInput={TextField}
-                  // value={amount}
-                  // decimalSeparator="," 
-                  // thousandSeparator="."
-                  // allowNegative={false}
-                  // prefix="R$ "
-                  // onValueChange={(values) => setAmount(values.floatValue || 0)}
-                  // sx={{ marginBottom: 2 }}
-                /> */}
+                <TextField label="Usuário" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} sx={{ marginBottom: 2 }} />
+                <TextField label="Senha" fullWidth type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={{ marginBottom: 2 }} />
                 <Grid container spacing={2}>
-                  {/* <Grid item xs={6}><Button variant="contained" color="success" onClick={deposit} fullWidth>Depositar</Button></Grid>
-                  <Grid item xs={6}><Button variant="contained" color="error" onClick={withdraw} fullWidth>Retirar</Button></Grid> */}
+                  <Grid item xs={6}>
+                    <Button variant="contained" color="primary" onClick={register} fullWidth disabled={!isFormValid}>
+                      Criar conta
+                    </Button>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Button variant="contained" color="secondary" onClick={login} fullWidth disabled={!isFormValid}>
+                      Login
+                    </Button>
+                  </Grid>
                 </Grid>
-                {transactionMessage && <Typography variant="body1" sx={{ marginTop: 2, color: "green" }}>{transactionMessage}</Typography>}
               </CardContent>
             </Card>
           )}
-        </Box>
-      </Container>
+
+          {token && (
+            <>
+              <Card sx={{ marginTop: 3 }}>
+                <CardContent>
+                  <Typography variant="h6">
+                    Saldo: R$ {balance !== null ? balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "Carregando..."}
+                  </Typography>
+                  <Button variant="contained" color="primary" onClick={getBalance} fullWidth sx={{ marginTop: 2 }}>
+                    Atualizar Saldo
+                  </Button>
+                  <Button variant="contained" color="error" onClick={logout} fullWidth sx={{ marginTop: 2 }}>
+                    <ExitToAppIcon sx={{ marginRight: 1 }} />
+                    Logout
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card sx={{ marginTop: 3 }}>
+                <CardContent>
+                  <NumericFormat
+                    // label="Valor"
+                    // fullWidth
+                    // customInput={TextField}
+                    // value={amount}
+                    // decimalSeparator=","
+                    // thousandSeparator="."
+                    // allowNegative={false}
+                    // prefix="R$ "
+                    // onValueChange={(values) => setAmount(values.floatValue || 0)}
+                    // sx={{ marginBottom: 2 }}
+                  />
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      {/* <Button variant="contained" color="success" onClick={deposit} fullWidth>
+                        <AttachMoneyIcon sx={{ marginRight: 1 }} />
+                        Depositar
+                      </Button> */}
+                    </Grid>
+                    {/* <Grid item xs={6}>
+                      <Button variant="contained" color="error" onClick={withdraw} fullWidth>
+                        Sacar
+                      </Button>
+                    </Grid> */}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </Container>
+      </Box>
     </ThemeProvider>
   );
 }

@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Button, TextField, Container, Typography, Box, Card, CardContent, Grid } from "@mui/material";
+import {
+  Button,
+  TextField,
+  Container,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  Grid,
+} from "@mui/material";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { NumericFormat } from "react-number-format";
 
@@ -67,7 +75,8 @@ function App() {
 
   const deposit = async () => {
     if (amount <= 0) {
-      alert("O valor deve ser maior que zero.");
+      setTransactionMessage("O valor deve ser maior que zero.");
+      setTimeout(() => setTransactionMessage(""), 4000);
       return;
     }
     try {
@@ -81,11 +90,13 @@ function App() {
     } catch (error) {
       setTransactionMessage("Erro ao depositar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
+    setTimeout(() => setTransactionMessage(""), 4000);
   };
 
   const withdraw = async () => {
     if (amount <= 0) {
-      alert("O valor deve ser maior que zero.");
+      setTransactionMessage("O valor deve ser maior que zero.");
+      setTimeout(() => setTransactionMessage(""), 4000);
       return;
     }
     try {
@@ -99,6 +110,7 @@ function App() {
     } catch (error) {
       setTransactionMessage("Erro ao sacar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
+    setTimeout(() => setTransactionMessage(""), 4000);
   };
 
   const theme = createTheme({
@@ -183,30 +195,40 @@ function App() {
               <Card sx={{ marginTop: 3 }}>
                 <CardContent>
                   <NumericFormat
-                    // label="Valor"
-                    // fullWidth
-                    // customInput={TextField}
-                    // value={amount}
-                    // decimalSeparator=","
-                    // thousandSeparator="."
-                    // allowNegative={false}
-                    // prefix="R$ "
-                    // onValueChange={(values) => setAmount(values.floatValue || 0)}
-                    // sx={{ marginBottom: 2 }}
+                    label="Valor"
+                    fullWidth
+                    customInput={TextField}
+                    value={amount}
+                    decimalSeparator=","
+                    thousandSeparator="."
+                    allowNegative={false}
+                    prefix="R$ "
+                    onValueChange={(values) => setAmount(values.floatValue || 0)}
+                    sx={{ marginBottom: 2 }}
                   />
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
-                      {/* <Button variant="contained" color="success" onClick={deposit} fullWidth>
+                      <Button variant="contained" color="success" onClick={deposit} fullWidth>
                         <AttachMoneyIcon sx={{ marginRight: 1 }} />
                         Depositar
-                      </Button> */}
+                      </Button>
                     </Grid>
-                    {/* <Grid item xs={6}>
+                    <Grid item xs={6}>
                       <Button variant="contained" color="error" onClick={withdraw} fullWidth>
                         Sacar
                       </Button>
-                    </Grid> */}
+                    </Grid>
                   </Grid>
+
+                  {transactionMessage && (
+                    <Typography
+                      variant="body2"
+                      sx={{ marginTop: 2 }}
+                      color={transactionMessage.toLowerCase().includes("erro") ? "error" : "success.main"}
+                    >
+                      {transactionMessage}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </>

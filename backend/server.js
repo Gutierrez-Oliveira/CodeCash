@@ -123,7 +123,6 @@ app.post("/transfer", authenticate, async (req, res) => {
     await fromUser.save();
     await toUser.save();
 
-    // Registrar a transação
     const transaction = new Transaction({
       fromUser: fromUser._id,
       toUser: toUser._id,
@@ -153,28 +152,40 @@ app.get("/transactions", authenticate, async (req, res) => {
 
 // Depósito
 app.post("/deposit", authenticate, async (req, res) => {
-  const { amount } = req.body;
+  let { amount } = req.body;
+
+  if (typeof amount !== "number" || isNaN(amount)) {
+    return res.status(400).json({ error: "Valor inválido. Deve ser um número." });
+  }
 
   if (amount <= 0) {
-    return res.status(400).json({ error: "O valor deve ser maior que zero" });
+    return res.status(400).json({ error: "O valor deve ser maior que zero." });
   }
 
   try {
     const user = await User.findById(req.userId);
     user.balance += amount;
     await user.save();
-    res.json({ message: "Depósito realizado com sucesso" });
+    res.json({
+      message: "Depósito realizado com sucesso",
+      balance: user.balance,
+    });
   } catch (error) {
+    console.error("Erro ao processar depósito:", error);
     res.status(500).json({ error: "Erro ao processar depósito" });
   }
 });
 
 // Saque
 app.post("/withdraw", authenticate, async (req, res) => {
-  const { amount } = req.body;
+  let { amount } = req.body;
+
+  if (typeof amount !== "number" || isNaN(amount)) {
+    return res.status(400).json({ error: "Valor inválido. Deve ser um número." });
+  }
 
   if (amount <= 0) {
-    return res.status(400).json({ error: "O valor deve ser maior que zero" });
+    return res.status(400).json({ error: "O valor deve ser maior que zero." });
   }
 
   try {
@@ -186,8 +197,12 @@ app.post("/withdraw", authenticate, async (req, res) => {
 
     user.balance -= amount;
     await user.save();
-    res.json({ message: "Saque realizado com sucesso" });
+    res.json({
+      message: "Saque realizado com sucesso",
+      balance: user.balance,
+    });
   } catch (error) {
+    console.error("Erro ao processar saque:", error);
     res.status(500).json({ error: "Erro ao processar saque" });
   }
 });

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import {
   Button,
   TextField,
@@ -23,6 +24,8 @@ function App() {
   const [balance, setBalance] = useState(null);
   const [amount, setAmount] = useState(0);
   const [transactionMessage, setTransactionMessage] = useState("");
+  const [transactions, setTransactions] = useState([]);
+  const [showTransactions, setShowTransactions] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -58,6 +61,8 @@ function App() {
     setBalance(null);
     setUsername("");
     setPassword("");
+    setTransactions([]);
+    setShowTransactions(false);
   };
 
   const getBalance = async () => {
@@ -75,8 +80,7 @@ function App() {
 
   const deposit = async () => {
     if (amount <= 0) {
-      setTransactionMessage("O valor deve ser maior que zero.");
-      setTimeout(() => setTransactionMessage(""), 4000);
+      alert("O valor deve ser maior que zero.");
       return;
     }
     try {
@@ -90,13 +94,11 @@ function App() {
     } catch (error) {
       setTransactionMessage("Erro ao depositar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
-    setTimeout(() => setTransactionMessage(""), 4000);
   };
 
   const withdraw = async () => {
     if (amount <= 0) {
-      setTransactionMessage("O valor deve ser maior que zero.");
-      setTimeout(() => setTransactionMessage(""), 4000);
+      alert("O valor deve ser maior que zero.");
       return;
     }
     try {
@@ -110,7 +112,18 @@ function App() {
     } catch (error) {
       setTransactionMessage("Erro ao sacar: " + (error.response?.data?.error || "Erro desconhecido"));
     }
-    setTimeout(() => setTransactionMessage(""), 4000);
+  };
+
+  const getTransactions = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/transactions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTransactions(res.data);
+      setShowTransactions(true);
+    } catch (error) {
+      alert("Erro ao buscar transações: " + (error.response?.data?.error || "Erro desconhecido"));
+    }
   };
 
   const theme = createTheme({
@@ -185,6 +198,9 @@ function App() {
                   <Button variant="contained" color="primary" onClick={getBalance} fullWidth sx={{ marginTop: 2 }}>
                     Atualizar Saldo
                   </Button>
+                  <Button variant="outlined" color="primary" onClick={getTransactions} fullWidth sx={{ marginTop: 2 }}>
+                    Ver Histórico
+                  </Button>
                   <Button variant="contained" color="error" onClick={logout} fullWidth sx={{ marginTop: 2 }}>
                     <ExitToAppIcon sx={{ marginRight: 1 }} />
                     Logout
@@ -199,7 +215,7 @@ function App() {
                     fullWidth
                     customInput={TextField}
                     value={amount}
-                    decimalSeparator=","
+                    decimalSeparator="," 
                     thousandSeparator="."
                     allowNegative={false}
                     prefix="R$ "
@@ -219,18 +235,58 @@ function App() {
                       </Button>
                     </Grid>
                   </Grid>
-
-                  {transactionMessage && (
-                    <Typography
-                      variant="body2"
-                      sx={{ marginTop: 2 }}
-                      color={transactionMessage.toLowerCase().includes("erro") ? "error" : "success.main"}
-                    >
-                      {transactionMessage}
-                    </Typography>
-                  )}
                 </CardContent>
               </Card>
+
+              {showTransactions && (
+  <Card sx={{ marginTop: 3, maxHeight: 300, overflow: "auto" }}>
+    <CardContent>
+      <Typography variant="h6" gutterBottom>
+        Histórico de Transações
+      </Typography>
+      {transactions.length === 0 ? (
+        <Typography variant="body2">Nenhuma transação encontrada.</Typography>
+      ) : (
+        transactions.map((tx, index) => {
+          const userId = jwtDecode(token).id;
+          let tipo = "";
+          let descricao = "";
+          let cor = "text.primary";
+
+          if (!tx.fromUser && tx.toUser._id === userId) {
+            tipo = "Depósito";
+            descricao = "Depósito recebido";
+            cor = "green";
+          } else if (!tx.toUser && tx.fromUser._id === userId) {
+            tipo = "Saque";
+            descricao = "Saque realizado";
+            cor = "red";
+          } else {
+            const isIncoming = tx.toUser._id === userId;
+            tipo = "Transferência";
+            descricao = isIncoming
+              ? `Recebido de ${tx.fromUser?.username || "desconhecido"}`
+              : `Enviado para ${tx.toUser?.username || "desconhecido"}`;
+            cor = isIncoming ? "green" : "red";
+          }
+
+          return (
+            <Box key={index} sx={{ borderBottom: "1px solid #ccc", padding: 1 }}>
+              <Typography variant="body2"><strong>{tipo}:</strong> {descricao}</Typography>
+              <Typography variant="body2" color={cor}>
+                {cor === "green" ? "+" : "-"} R$ {tx.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(tx.date).toLocaleString("pt-BR")}
+              </Typography>
+            </Box>
+          );
+        })
+      )}
+    </CardContent>
+  </Card>
+)}
+
             </>
           )}
         </Container>
